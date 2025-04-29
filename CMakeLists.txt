@@ -53,6 +53,8 @@ add_executable(cits3003_project
         src/scene/editor_scene/GroupElement.cpp
         src/scene/editor_scene/EmissiveEntityElement.cpp
         src/scene/editor_scene/SceneElement.cpp
+        src/Entity/EntityRotation.cpp
+        src/Entity/EntityRotation.h
 )
 
 target_include_directories(cits3003_project PRIVATE src)
