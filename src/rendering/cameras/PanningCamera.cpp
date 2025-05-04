@@ -23,43 +23,82 @@ void PanningCamera::update(const Window& window, float dt, bool controls_enabled
         }
 
         if (!resetSeq) {
-            // Extract basis vectors from inverse view matrix to find world space directions of view space basis
-            auto x_basis = glm::vec3{inverse_view_matrix[0]};
-            auto y_basis = glm::vec3{inverse_view_matrix[1]};
-
-            auto pan = window.get_mouse_delta(GLFW_MOUSE_BUTTON_MIDDLE);
-            focus_point += (x_basis * (float) -pan.x + y_basis * (float) pan.y) * PAN_SPEED * dt * distance / (float) window.get_window_height();
-
-            pitch -= PITCH_SPEED * (float) window.get_mouse_delta(GLFW_MOUSE_BUTTON_RIGHT).y;
-            yaw -= YAW_SPEED * (float) window.get_mouse_delta(GLFW_MOUSE_BUTTON_RIGHT).x;
-            distance -= ZOOM_SCROLL_MULTIPLIER * ZOOM_SPEED * window.get_scroll_delta();
-
-            auto is_dragging = window.is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT) || window.is_mouse_pressed(GLFW_MOUSE_BUTTON_MIDDLE);
-            if (is_dragging) {
+            // Handle yaw and pitch rotation with right mouse button
+            if (window.is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+                auto mouseDelta = window.get_mouse_delta(GLFW_MOUSE_BUTTON_RIGHT);
+                pitch -= PITCH_SPEED * (float)mouseDelta.y;
+                yaw -= YAW_SPEED * (float)mouseDelta.x;
+                
+                // Ensure cursor is disabled when dragging
                 window.set_cursor_disabled(true);
+            }
+            
+            // Handle panning with middle mouse button
+            if (window.is_mouse_pressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
+                auto panDelta = window.get_mouse_delta(GLFW_MOUSE_BUTTON_MIDDLE);
+                
+                // First compute the correct forward, right, and up vectors based on our current orientation
+                glm::mat4 rotationMatrix = glm::rotate(glm::radians(yaw), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+                                          glm::rotate(glm::radians(pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+                
+                glm::vec3 forward = -glm::vec3(rotationMatrix[2]);
+                glm::vec3 right = glm::vec3(rotationMatrix[0]);
+                glm::vec3 up = glm::vec3(rotationMatrix[1]);
+                
+                // Pan the camera by moving the focus point
+                float panScale = PAN_SPEED * dt * distance / (float)window.get_window_height();
+                focus_point += right * (float)(-panDelta.x) * panScale + up * (float)(panDelta.y) * panScale;
+                
+                // Ensure cursor is disabled when panning
+                window.set_cursor_disabled(true);
+            }
+            
+            // Handle zooming with scroll wheel
+            float scrollDelta = window.get_scroll_delta();
+            if (scrollDelta != 0.0f) {
+                distance -= ZOOM_SCROLL_MULTIPLIER * ZOOM_SPEED * scrollDelta;
             }
         }
     }
 
+    // Apply constraints to our camera parameters
     yaw = std::fmod(yaw + YAW_PERIOD, YAW_PERIOD);
     pitch = clamp(pitch, PITCH_MIN, PITCH_MAX);
     distance = clamp(distance, MIN_DISTANCE, MAX_DISTANCE);
 
-    view_matrix = glm::translate(glm::vec3{0.0f, 0.0f, -distance});
+    // Calculate view matrix based on current camera parameters
+    // First create rotation matrix for pitch and yaw
+    glm::mat4 rotationMatrix = glm::rotate(glm::radians(yaw), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+                              glm::rotate(glm::radians(pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+    
+    // Calculate camera position from focus point, distance, and orientation
+    glm::vec3 forward = -glm::vec3(rotationMatrix[2]);
+    glm::vec3 camera_position = focus_point - forward * distance;
+    
+    // Create the view matrix
+    view_matrix = glm::lookAt(camera_position, focus_point, glm::vec3(0.0f, 1.0f, 0.0f));
     inverse_view_matrix = glm::inverse(view_matrix);
-
-    projection_matrix = glm::infinitePerspective(fov, window.get_framebuffer_aspect_ratio(), 1.0f);
+    
+    // Create projection matrix
+    projection_matrix = glm::infinitePerspective(fov, window.get_framebuffer_aspect_ratio(), near);
     inverse_projection_matrix = glm::inverse(projection_matrix);
+    
+    // Release the cursor if no mouse buttons are pressed
+    if (!window.is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT) && 
+        !window.is_mouse_pressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
+        window.set_cursor_disabled(false);
+    }
 }
 
 void PanningCamera::reset() {
-    distance = init_distance;
-    focus_point = init_focus_point;
-    pitch = init_pitch;
-    yaw = init_yaw;
-    fov = init_fov;
-    near = init_near;
-    gamma = init_gamma;
+    // Reset to the specified default values
+    distance = 8.0f;
+    focus_point = glm::vec3(0.0f, 0.0f, 0.0f);
+    pitch = -45.0f;
+    yaw = 315.0f;
+    near = 0.01f;
+    fov = glm::radians(90.0f);
+    gamma = 2.2f;
 }
 
 void PanningCamera::add_imgui_options_section(const SceneContext& scene_context) {
@@ -73,14 +112,14 @@ void PanningCamera::add_imgui_options_section(const SceneContext& scene_context)
     ImGui::DragFloat("Distance", &distance, 0.01f, MIN_DISTANCE, MAX_DISTANCE);
     ImGui::DragDisableCursor(scene_context.window);
 
-    float pitch_degrees = glm::degrees(pitch);
+    float pitch_degrees = pitch;  // Already in degrees
     ImGui::SliderFloat("Pitch", &pitch_degrees, -89.99f, 89.99f);
-    pitch = glm::radians(pitch_degrees);
+    pitch = pitch_degrees;
 
-    float yaw_degrees = glm::degrees(yaw);
+    float yaw_degrees = yaw;  // Already in degrees
     ImGui::DragFloat("Yaw", &yaw_degrees);
     ImGui::DragDisableCursor(scene_context.window);
-    yaw = glm::radians(glm::mod(yaw_degrees, 360.0f));
+    yaw = glm::mod(yaw_degrees, 360.0f);
 
     ImGui::SliderFloat("Near Plane", &near, 0.001f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
 
@@ -99,27 +138,28 @@ void PanningCamera::add_imgui_options_section(const SceneContext& scene_context)
 CameraProperties PanningCamera::save_properties() const {
     return CameraProperties{
         get_position(),
-        yaw,
-        pitch,
+        glm::radians(yaw),  // Convert to radians for storage
+        glm::radians(pitch), // Convert to radians for storage
         fov,
         gamma
     };
 }
 
 void PanningCamera::load_properties(const CameraProperties& camera_properties) {
-    yaw = camera_properties.yaw;
-    pitch = camera_properties.pitch;
-    focus_point = camera_properties.position;
+    yaw = glm::degrees(camera_properties.yaw);  // Convert to degrees for our system
+    pitch = glm::degrees(camera_properties.pitch);  // Convert to degrees for our system
     fov = camera_properties.fov;
     gamma = camera_properties.gamma;
-    distance = 1.0f;
-
-    auto inverse_rot_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * glm::rotate(pitch, glm::vec3{1.0f, 0.0f, 0.0f});
-    auto forward = glm::vec3{inverse_rot_matrix[2]};
-
-    focus_point -= distance * forward;
+    
+    // Calculate focus point from position, yaw, and pitch
+    glm::mat4 rotationMatrix = glm::rotate(glm::radians(yaw), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+                              glm::rotate(glm::radians(pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::vec3 forward = -glm::vec3(rotationMatrix[2]);
+    glm::vec3 camera_position = camera_properties.position;
+    
+    distance = 1.0f;  // Initial distance
+    focus_point = camera_position + forward * distance;
 }
-
 
 glm::mat4 PanningCamera::get_view_matrix() const {
     return view_matrix;
@@ -139,4 +179,12 @@ glm::mat4 PanningCamera::get_inverse_projection_matrix() const {
 
 float PanningCamera::get_gamma() const {
     return gamma;
+}
+
+glm::vec3 PanningCamera::get_position() const {
+    // Calculate the actual camera position based on focus point, distance, and orientation
+    glm::mat4 rotationMatrix = glm::rotate(glm::radians(yaw), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+                              glm::rotate(glm::radians(pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::vec3 forward = -glm::vec3(rotationMatrix[2]);
+    return focus_point - forward * distance;
 }
