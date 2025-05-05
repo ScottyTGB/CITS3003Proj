@@ -98,9 +98,10 @@ glm::mat4 EditorScene::LocalTransformComponent::calc_model_matrix() const {
     glm::mat4 translation_matrix = glm::translate(glm::mat4(1.0f), position);
     
     // Create rotation matrices for each axis
-    glm::mat4 rotation_x = glm::rotate(glm::mat4(1.0f), euler_rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+    // Values for x and z are negative to match the video demonstration.
+    glm::mat4 rotation_x = glm::rotate(glm::mat4(1.0f), euler_rotation.x, glm::vec3(-1.0f, 0.0f, 0.0f));
     glm::mat4 rotation_y = glm::rotate(glm::mat4(1.0f), euler_rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 rotation_z = glm::rotate(glm::mat4(1.0f), euler_rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 rotation_z = glm::rotate(glm::mat4(1.0f), euler_rotation.z, glm::vec3(0.0f, 0.0f, -1.0f));
     
     // Create scale matrix
     glm::mat4 scale_matrix = glm::scale(glm::mat4(1.0f), scale);
