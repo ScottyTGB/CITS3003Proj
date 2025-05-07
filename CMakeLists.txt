@@ -55,6 +55,8 @@ add_executable(cits3003_project
         src/scene/editor_scene/SceneElement.cpp
         src/Entity/EntityRotation.cpp
         src/Entity/EntityRotation.h
+        clippingPlane.h
+        clippingPlane.cpp
 )
 
 target_include_directories(cits3003_project PRIVATE src)
