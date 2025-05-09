@@ -23,32 +23,63 @@ void PanningCamera::update(const Window& window, float dt, bool controls_enabled
         }
 
         if (!resetSeq) {
-            // Extract basis vectors from inverse view matrix to find world space directions of view space basis
-            auto x_basis = glm::vec3{inverse_view_matrix[0]};
-            auto y_basis = glm::vec3{inverse_view_matrix[1]};
-
+            // Get the world space directions based on the current view
+            glm::mat4 rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * 
+                                        glm::rotate(pitch, glm::vec3{1.0f, 0.0f, 0.0f});
+            auto right_vector = glm::vec3{rotation_matrix[0]};
+            auto up_vector = glm::vec3{rotation_matrix[1]};
+            
+            // Handle middle mouse button panning
             auto pan = window.get_mouse_delta(GLFW_MOUSE_BUTTON_MIDDLE);
-            focus_point += (x_basis * (float) -pan.x + y_basis * (float) pan.y) * PAN_SPEED * dt * distance / (float) window.get_window_height();
+            if (pan.x != 0.0 || pan.y != 0.0) {
+                float pan_scale = PAN_SPEED * dt * distance / (float) window.get_window_height();
+                focus_point += right_vector * (float)pan.x * pan_scale;
+                focus_point += up_vector * (float)pan.y * pan_scale;
+            }
+            
+            // Handle right mouse button for rotation
+            auto rotate = window.get_mouse_delta(GLFW_MOUSE_BUTTON_RIGHT);
+            if (rotate.x != 0.0) {
+                // Horizontal drag - rotate around the UP axis (yaw)
+                yaw -= YAW_SPEED * (float)rotate.x;
+            }
+            if (rotate.y != 0.0) {
+                // Vertical drag - change elevation angle (pitch)
+                pitch -= PITCH_SPEED * (float)rotate.y;
+            }
+            
+            // Handle mouse scroll for zoom
+            float scroll = window.get_scroll_delta();
+            if (scroll != 0.0) {
+                distance -= ZOOM_SCROLL_MULTIPLIER * ZOOM_SPEED * scroll;
+            }
 
-            pitch -= PITCH_SPEED * (float) window.get_mouse_delta(GLFW_MOUSE_BUTTON_RIGHT).y;
-            yaw -= YAW_SPEED * (float) window.get_mouse_delta(GLFW_MOUSE_BUTTON_RIGHT).x;
-            distance -= ZOOM_SCROLL_MULTIPLIER * ZOOM_SPEED * window.get_scroll_delta();
-
-            auto is_dragging = window.is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT) || window.is_mouse_pressed(GLFW_MOUSE_BUTTON_MIDDLE);
+            // Hide cursor during drag operations
+            auto is_dragging = window.is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT) || 
+                              window.is_mouse_pressed(GLFW_MOUSE_BUTTON_MIDDLE);
             if (is_dragging) {
                 window.set_cursor_disabled(true);
             }
         }
     }
 
+    // Apply constraints
     yaw = std::fmod(yaw + YAW_PERIOD, YAW_PERIOD);
     pitch = clamp(pitch, PITCH_MIN, PITCH_MAX);
     distance = clamp(distance, MIN_DISTANCE, MAX_DISTANCE);
 
-    view_matrix = glm::translate(glm::vec3{0.0f, 0.0f, -distance});
+    // Calculate the camera position based on focus point, distance, pitch, and yaw
+    glm::mat4 rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * 
+                               glm::rotate(pitch, glm::vec3{-1.0f, 0.0f, 0.0f});
+    glm::vec3 forward = glm::vec3{rotation_matrix[2]};
+    glm::vec3 position = focus_point - forward * distance;
+    
+    // Create view matrix
+    view_matrix = glm::lookAt(position, focus_point, UP);
     inverse_view_matrix = glm::inverse(view_matrix);
 
-    projection_matrix = glm::infinitePerspective(fov, window.get_framebuffer_aspect_ratio(), 1.0f);
+    // Update projection matrix
+    projection_matrix = glm::infinitePerspective(fov, window.get_framebuffer_aspect_ratio(), near);
     inverse_projection_matrix = glm::inverse(projection_matrix);
 }
 
@@ -109,17 +140,27 @@ CameraProperties PanningCamera::save_properties() const {
 void PanningCamera::load_properties(const CameraProperties& camera_properties) {
     yaw = camera_properties.yaw;
     pitch = camera_properties.pitch;
-    focus_point = camera_properties.position;
     fov = camera_properties.fov;
     gamma = camera_properties.gamma;
+    
+    // Set position as the new focus point and reset distance
+    focus_point = camera_properties.position;
     distance = 1.0f;
 
-    auto inverse_rot_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * glm::rotate(pitch, glm::vec3{1.0f, 0.0f, 0.0f});
-    auto forward = glm::vec3{inverse_rot_matrix[2]};
-
+    // Adjust focus point based on forward direction and distance
+    auto rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * 
+                           glm::rotate(pitch, glm::vec3{1.0f, 0.0f, 0.0f});
+    auto forward = glm::vec3{rotation_matrix[2]};
     focus_point -= distance * forward;
 }
 
+glm::vec3 PanningCamera::get_position() const {
+    // Calculate the camera position based on focus point, distance, pitch, and yaw
+    glm::mat4 rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * 
+                               glm::rotate(pitch, glm::vec3{1.0f, 0.0f, 0.0f});
+    glm::vec3 forward = glm::vec3{rotation_matrix[2]};
+    return focus_point - forward * distance;
+}
 
 glm::mat4 PanningCamera::get_view_matrix() const {
     return view_matrix;
