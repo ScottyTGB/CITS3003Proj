@@ -34,6 +34,12 @@ cmake --build cmake-build-debug
 cmake --build cmake-build-release
 ```
 
+#### Run Latest Build
+
+```bash
+./cits3003_project
+```
+
 ## Project Documentation
 
 TBD
