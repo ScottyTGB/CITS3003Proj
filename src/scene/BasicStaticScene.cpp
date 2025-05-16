@@ -105,8 +105,42 @@ void BasicStaticScene::open(const SceneContext& scene_context) {
     /// Just calling this once to make sure the initial values are correct.
     render_scene.use_camera(*camera);
 
+    // V-Shape Triangle Entity
+    std::vector<EntityRenderer::VertexData> triangle_vertices = {
+        {{-1.0f, 0.0f, 1.0f}, {0, 1, 0}, {0, 0}},   // position, normal, UV
+        {{ 0.0f, 1.0f, 0.0f}, {0, 1, 0}, {0.5f, 1}},
+        {{ 1.0f, 0.0f, 1.0f}, {0, 1, 0}, {1, 0}},
+    };
+
+    std::vector<unsigned int> triangle_indices = { 0, 1, 2 };
+
+    // Build the triangle model from raw data
+    auto triangle_model = scene_context.model_loader.load_from_data<EntityRenderer::VertexData>(
+        triangle_vertices, triangle_indices
+    );
+
+    // Create the triangle entity using the same material as the crate
+    auto triangle_entity = EntityRenderer::Entity::create(
+        triangle_model,
+        EntityRenderer::InstanceData{
+            glm::translate(glm::vec3(0.0f, 0.0f, -2.0f)) * glm::scale(glm::vec3(2.0f)),  // Move + scale
+            EntityRenderer::EntityMaterial{
+                glm::vec4(1.0f),   // Ambient
+                glm::vec4(1.0f),   // Diffuse
+                glm::vec4(1.0f),   // Specular
+                64.0f              // Shininess
+            }
+        },
+        EntityRenderer::RenderData{
+            default_white_texture,   // Diffuse texture
+            default_white_texture    // Specular texture
+        }
+    );
+
+
     /// Add the entities to the render scene
     render_scene.insert_entity(plane_entity);
+    render_scene.insert_entity(triangle_entity);
     render_scene.insert_entity(box_entity);
     render_scene.insert_entity(light_sphere_entity);
     render_scene.insert_entity(cone_entity);
