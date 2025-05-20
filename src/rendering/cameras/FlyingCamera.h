@@ -5,12 +5,11 @@
 
 /// A concrete implementation of CameraInterface, that is a camera with basic flight like controls.
 class FlyingCamera : public CameraInterface {
-    glm::vec3 init_position = {0.0f, 0.0f, 0.0f};
-    float init_pitch = 0.0f;
-    float init_yaw = 0.0f;
-
-    float init_near = 0.01f;
-    float init_fov = glm::radians(90.0f);
+    glm::vec3 init_position = {0.0f, 4.0f, 8.0f}; // elevated and back
+    float init_pitch = glm::radians(-30.0f);     // tilt downward
+    float init_yaw = glm::radians(0.0f);         // face forward
+    float init_near = 0.01f;                     // close clipping plane
+    float init_fov = glm::radians(60.0f);        // moderate zoom-in
 
     float init_gamma = 2.2f;
 

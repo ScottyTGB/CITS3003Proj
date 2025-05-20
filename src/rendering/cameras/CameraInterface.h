@@ -22,6 +22,7 @@ struct CameraProperties {
     float pitch;
     float fov;
     float gamma;
+    float near;
 };
 
 /// A common interface that a Camera must implement.

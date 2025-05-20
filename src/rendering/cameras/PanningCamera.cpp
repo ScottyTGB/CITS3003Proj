@@ -24,11 +24,11 @@ void PanningCamera::update(const Window& window, float dt, bool controls_enabled
 
         if (!resetSeq) {
             // Get the world space directions based on the current view
-            glm::mat4 rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * 
+            glm::mat4 rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) *
                                         glm::rotate(pitch, glm::vec3{1.0f, 0.0f, 0.0f});
             auto right_vector = glm::vec3{rotation_matrix[0]};
             auto up_vector = glm::vec3{rotation_matrix[1]};
-            
+
             // Handle middle mouse button panning
             auto pan = window.get_mouse_delta(GLFW_MOUSE_BUTTON_MIDDLE);
             if (pan.x != 0.0 || pan.y != 0.0) {
@@ -36,7 +36,7 @@ void PanningCamera::update(const Window& window, float dt, bool controls_enabled
                 focus_point += right_vector * (float)pan.x * pan_scale;
                 focus_point += up_vector * (float)pan.y * pan_scale;
             }
-            
+
             // Handle right mouse button for rotation
             auto rotate = window.get_mouse_delta(GLFW_MOUSE_BUTTON_RIGHT);
             if (rotate.x != 0.0) {
@@ -47,7 +47,7 @@ void PanningCamera::update(const Window& window, float dt, bool controls_enabled
                 // Vertical drag - change elevation angle (pitch)
                 pitch -= PITCH_SPEED * (float)rotate.y;
             }
-            
+
             // Handle mouse scroll for zoom
             float scroll = window.get_scroll_delta();
             if (scroll != 0.0) {
@@ -55,7 +55,7 @@ void PanningCamera::update(const Window& window, float dt, bool controls_enabled
             }
 
             // Hide cursor during drag operations
-            auto is_dragging = window.is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT) || 
+            auto is_dragging = window.is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT) ||
                               window.is_mouse_pressed(GLFW_MOUSE_BUTTON_MIDDLE);
             if (is_dragging) {
                 window.set_cursor_disabled(true);
@@ -67,19 +67,23 @@ void PanningCamera::update(const Window& window, float dt, bool controls_enabled
     yaw = std::fmod(yaw + YAW_PERIOD, YAW_PERIOD);
     pitch = clamp(pitch, PITCH_MIN, PITCH_MAX);
     distance = clamp(distance, MIN_DISTANCE, MAX_DISTANCE);
+    near = clamp(near, 0.00001f, 10.0f);  // clamp near plane so it’s not too large
 
     // Calculate the camera position based on focus point, distance, pitch, and yaw
-    glm::mat4 rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * 
+    glm::mat4 rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) *
                                glm::rotate(pitch, glm::vec3{-1.0f, 0.0f, 0.0f});
     glm::vec3 forward = glm::vec3{rotation_matrix[2]};
     glm::vec3 position = focus_point - forward * distance;
-    
+
     // Create view matrix
     view_matrix = glm::lookAt(position, focus_point, UP);
     inverse_view_matrix = glm::inverse(view_matrix);
 
     // Update projection matrix
-    projection_matrix = glm::infinitePerspective(fov, window.get_framebuffer_aspect_ratio(), near);
+    float aspect_ratio = window.get_framebuffer_aspect_ratio();
+    float far = 1000.0f; // or expose this as a UI-controlled variable if needed
+    projection_matrix = glm::perspective(fov, window.get_framebuffer_aspect_ratio(), near, far);
+
     inverse_projection_matrix = glm::inverse(projection_matrix);
 }
 
@@ -113,7 +117,8 @@ void PanningCamera::add_imgui_options_section(const SceneContext& scene_context)
     ImGui::DragDisableCursor(scene_context.window);
     yaw = glm::radians(glm::mod(yaw_degrees, 360.0f));
 
-    ImGui::SliderFloat("Near Plane", &near, 0.001f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
+    ImGui::SliderFloat("Near Plane", &near, 0.001f, 1.0f, "%.5f", ImGuiSliderFlags_Logarithmic);
+    ImGui::SliderFloat("Far Plane", &far, 1.0f, 2000.0f, "%.1f");
 
     float fov_degrees = glm::degrees(fov);
     ImGui::SliderFloat("FOV", &fov_degrees, 40.0f, 170.0f);
@@ -133,7 +138,8 @@ CameraProperties PanningCamera::save_properties() const {
         yaw,
         pitch,
         fov,
-        gamma
+        gamma,
+        near
     };
 }
 
@@ -142,13 +148,14 @@ void PanningCamera::load_properties(const CameraProperties& camera_properties) {
     pitch = camera_properties.pitch;
     fov = camera_properties.fov;
     gamma = camera_properties.gamma;
-    
+    near = camera_properties.near;
+
     // Set position as the new focus point and reset distance
     focus_point = camera_properties.position;
     distance = 1.0f;
 
     // Adjust focus point based on forward direction and distance
-    auto rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * 
+    auto rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) *
                            glm::rotate(pitch, glm::vec3{1.0f, 0.0f, 0.0f});
     auto forward = glm::vec3{rotation_matrix[2]};
     focus_point -= distance * forward;
@@ -156,7 +163,7 @@ void PanningCamera::load_properties(const CameraProperties& camera_properties) {
 
 glm::vec3 PanningCamera::get_position() const {
     // Calculate the camera position based on focus point, distance, pitch, and yaw
-    glm::mat4 rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) * 
+    glm::mat4 rotation_matrix = glm::rotate(yaw, glm::vec3{0.0f, 1.0f, 0.0f}) *
                                glm::rotate(pitch, glm::vec3{1.0f, 0.0f, 0.0f});
     glm::vec3 forward = glm::vec3{rotation_matrix[2]};
     return focus_point - forward * distance;
