@@ -1,10 +1,12 @@
+// Modifications for src/rendering/renders/shaders/BaseLitEntityShader.cpp
+
 #include "BaseLitEntityShader.h"
 
 #include <utility>
 
 BaseLitEntityShader::BaseLitEntityShader(std::string name, const std::string& vertex_path, const std::string& fragment_path,
-                                         std::unordered_map<std::string, std::string> vert_defines,
-                                         std::unordered_map<std::string, std::string> frag_defines) :
+                                       std::unordered_map<std::string, std::string> vert_defines,
+                                       std::unordered_map<std::string, std::string> frag_defines) :
     BaseEntityShader(std::move(name), vertex_path, fragment_path, std::move(vert_defines), std::move(frag_defines)),
     point_lights_ubo({}, false) {
 
@@ -18,6 +20,11 @@ void BaseLitEntityShader::get_uniforms_set_bindings() {
     specular_tint_location = get_uniform_location("specular_tint");
     ambient_tint_location = get_uniform_location("ambient_tint");
     shininess_location = get_uniform_location("shininess");
+    
+    // Get locations for texture scale uniforms
+    diffuse_texture_scale_location = get_uniform_location("diffuse_texture_scale");
+    specular_texture_scale_location = get_uniform_location("specular_texture_scale");
+    
     // Texture sampler bindings
     set_binding("diffuse_texture", 0);
     set_binding("specular_map_texture", 1);
@@ -39,6 +46,10 @@ void BaseLitEntityShader::set_instance_data(const BaseLitEntityInstanceData& ins
     glProgramUniform3fv(id(), specular_tint_location, 1, &scaled_specular_tint[0]);
     glProgramUniform3fv(id(), ambient_tint_location, 1, &scaled_ambient_tint[0]);
     glProgramUniform1fv(id(), shininess_location, 1, &entity_material.shininess);
+    
+    // Set texture scale uniforms
+    glProgramUniform2fv(id(), diffuse_texture_scale_location, 1, &entity_material.diffuse_texture_scale[0]);
+    glProgramUniform2fv(id(), specular_texture_scale_location, 1, &entity_material.specular_texture_scale[0]);
 }
 
 void BaseLitEntityShader::set_point_lights(const std::vector<PointLight>& point_lights) {

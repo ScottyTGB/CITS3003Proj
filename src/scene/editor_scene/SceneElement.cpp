@@ -126,12 +126,60 @@ json EditorScene::LocalTransformComponent::local_transform_into_json() const {
     }};
 }
 
-void EditorScene::LitMaterialComponent::add_material_imgui_edit_section(MasterRenderScene& /*render_scene*/, const SceneContext& /*scene_context*/) {
+void EditorScene::LitMaterialComponent::add_material_imgui_edit_section(MasterRenderScene& /*render_scene*/, const SceneContext& scene_context) {
     // Set this to true if the user has changed any of the material values, otherwise the changes won't be propagated
     bool material_changed = false;
     ImGui::Text("Material");
 
-    // Add UI controls here
+    // Base material properties
+    material_changed |= ImGui::ColorEdit3("Diffuse Tint", &material.diffuse_tint[0]);
+    ImGui::SameLine(); ImGui::HelpMarker("Base color of the material in light");
+    
+    material_changed |= ImGui::DragFloat("Diffuse Intensity", &material.diffuse_tint.a, 0.01f, 0.0f, 5.0f);
+    ImGui::DragDisableCursor(scene_context.window);
+    
+    material_changed |= ImGui::ColorEdit3("Specular Tint", &material.specular_tint[0]);
+    ImGui::SameLine(); ImGui::HelpMarker("Color of specular highlights");
+    
+    material_changed |= ImGui::DragFloat("Specular Intensity", &material.specular_tint.a, 0.01f, 0.0f, 5.0f);
+    ImGui::DragDisableCursor(scene_context.window);
+    
+    material_changed |= ImGui::ColorEdit3("Ambient Tint", &material.ambient_tint[0]);
+    ImGui::SameLine(); ImGui::HelpMarker("Base color in shadow");
+    
+    material_changed |= ImGui::DragFloat("Ambient Intensity", &material.ambient_tint.a, 0.01f, 0.0f, 5.0f);
+    ImGui::DragDisableCursor(scene_context.window);
+    
+    material_changed |= ImGui::SliderFloat("Shininess", &material.shininess, 1.0f, 512.0f);
+    ImGui::SameLine(); ImGui::HelpMarker("Controls the sharpness of specular highlights");
+    
+    ImGui::Separator();
+    ImGui::Text("Texture Scaling");
+    
+    // Add texture scaling controls
+    material_changed |= ImGui::DragFloat2("Diffuse Texture Scale", &material.diffuse_texture_scale[0], 0.01f, 0.01f, 100.0f);
+    ImGui::DragDisableCursor(scene_context.window);
+    ImGui::SameLine(); ImGui::HelpMarker("Scales the diffuse texture coordinates (bigger value = smaller/more repetitions)");
+    
+    material_changed |= ImGui::DragFloat2("Specular Texture Scale", &material.specular_texture_scale[0], 0.01f, 0.01f, 100.0f);
+    ImGui::DragDisableCursor(scene_context.window);
+    ImGui::SameLine(); ImGui::HelpMarker("Scales the specular texture coordinates (bigger value = smaller/more repetitions)");
+    
+    // Add option to link scales
+    static bool link_scales = true;
+    if (ImGui::Checkbox("Link Texture Scales", &link_scales)) {
+        if (link_scales) {
+            // Sync scales when enabling link
+            material.specular_texture_scale = material.diffuse_texture_scale;
+            material_changed = true;
+        }
+    }
+    
+    // If scales are linked, sync them when either changes
+    if (link_scales && material.diffuse_texture_scale != material.specular_texture_scale) {
+        material.specular_texture_scale = material.diffuse_texture_scale;
+        material_changed = true;
+    }
 
     ImGui::Spacing();
     if (material_changed) {
@@ -145,6 +193,14 @@ void EditorScene::LitMaterialComponent::update_material_from_json(const json& js
     material.specular_tint = m["specular_tint"];
     material.ambient_tint = m["ambient_tint"];
     material.shininess = m["shininess"];
+    
+    // Load texture scaling if it exists (for backward compatibility)
+    if (m.contains("diffuse_texture_scale")) {
+        material.diffuse_texture_scale = m["diffuse_texture_scale"];
+    }
+    if (m.contains("specular_texture_scale")) {
+        material.specular_texture_scale = m["specular_texture_scale"];
+    }
 }
 
 json EditorScene::LitMaterialComponent::material_into_json() const {
@@ -153,15 +209,29 @@ json EditorScene::LitMaterialComponent::material_into_json() const {
         {"specular_tint", material.specular_tint},
         {"ambient_tint", material.ambient_tint},
         {"shininess", material.shininess},
+        {"diffuse_texture_scale", material.diffuse_texture_scale},
+        {"specular_texture_scale", material.specular_texture_scale},
     }};
 }
 
-void EditorScene::EmissiveMaterialComponent::add_emissive_material_imgui_edit_section(MasterRenderScene& /*render_scene*/, const SceneContext& /*scene_context*/) {
+void EditorScene::EmissiveMaterialComponent::add_emissive_material_imgui_edit_section(MasterRenderScene& /*render_scene*/, const SceneContext& scene_context) {
     // Set this to true if the user has changed any of the material values, otherwise the changes won't be propagated
     bool material_changed = false;
     ImGui::Text("Emissive Material");
 
-    // Add UI controls here
+    material_changed |= ImGui::ColorEdit3("Emission Tint", &material.emission_tint[0]);
+    ImGui::SameLine(); ImGui::HelpMarker("Color of emitted light");
+    
+    material_changed |= ImGui::SliderFloat("Emission Intensity", &material.emission_tint.a, 0.0f, 5.0f);
+    ImGui::SameLine(); ImGui::HelpMarker("Strength of emitted light");
+    
+    ImGui::Separator();
+    ImGui::Text("Texture Scaling");
+    
+    // Add texture scaling control
+    material_changed |= ImGui::DragFloat2("Emission Texture Scale", &material.emission_texture_scale[0], 0.01f, 0.01f, 100.0f);
+    ImGui::DragDisableCursor(scene_context.window);
+    ImGui::SameLine(); ImGui::HelpMarker("Scales the emission texture coordinates (bigger value = smaller/more repetitions)");
 
     ImGui::Spacing();
     if (material_changed) {
@@ -172,11 +242,17 @@ void EditorScene::EmissiveMaterialComponent::add_emissive_material_imgui_edit_se
 void EditorScene::EmissiveMaterialComponent::update_emissive_material_from_json(const json& json) {
     auto m = json["material"];
     material.emission_tint = m["emission_tint"];
+    
+    // Load texture scaling if it exists (for backward compatibility)
+    if (m.contains("emission_texture_scale")) {
+        material.emission_texture_scale = m["emission_texture_scale"];
+    }
 }
 
 json EditorScene::EmissiveMaterialComponent::emissive_material_into_json() const {
     return {"material", {
         {"emission_tint", material.emission_tint},
+        {"emission_texture_scale", material.emission_texture_scale},
     }};
 }
 

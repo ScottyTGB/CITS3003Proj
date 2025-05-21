@@ -25,6 +25,9 @@ namespace EmissiveEntityRenderer {
     struct EmissiveEntityMaterial {
         // Alpha components are just used to store a scalar that is applied before passing to the GPU
         glm::vec4 emission_tint;
+        
+        // Texture scaling factor
+        glm::vec2 emission_texture_scale{1.0f, 1.0f};
     };
 
     struct InstanceData : public BaseEntityInstanceData {
@@ -50,6 +53,9 @@ namespace EmissiveEntityRenderer {
     class EmissiveEntityShader : public BaseEntityShader {
         // Material
         int emission_tint_location{};
+        
+        // Texture scale uniform location
+        int emission_texture_scale_location{};
     public:
         EmissiveEntityShader();
 
