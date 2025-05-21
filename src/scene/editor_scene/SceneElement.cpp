@@ -181,7 +181,7 @@ void EditorScene::LitMaterialComponent::add_material_imgui_edit_section(MasterRe
     
     // Add UI control for shininess
     ImGui::Text("Surface Properties:");
-    if (ImGui::DragFloat("Shininess", &material.shininess, 1.0f, 1.0f, 1000.0f, "%.1f")) {
+    if (ImGui::DragFloat("Shininess", &material.shininess, 1.0f, 0.0f, 1000.0f, "%.1f")) {
         material_changed = true;
     }
     ImGui::DragDisableCursor(scene_context.window);
