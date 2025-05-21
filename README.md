@@ -2,6 +2,10 @@
 
 Graphics and Animations Project
 
+## Project Documentation
+
+This project has been built using Ubuntu 22.4 and the included standard CMake compilers.
+
 ## Cmake
 
 The following are commands for cmake
@@ -39,7 +43,3 @@ cmake --build cmake-build-release
 ```bash
 ./cits3003_project
 ```
-
-## Project Documentation
-
-TBD
