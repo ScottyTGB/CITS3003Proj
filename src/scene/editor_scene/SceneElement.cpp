@@ -126,12 +126,65 @@ json EditorScene::LocalTransformComponent::local_transform_into_json() const {
     }};
 }
 
-void EditorScene::LitMaterialComponent::add_material_imgui_edit_section(MasterRenderScene& /*render_scene*/, const SceneContext& /*scene_context*/) {
+void EditorScene::LitMaterialComponent::add_material_imgui_edit_section(MasterRenderScene& /*render_scene*/, const SceneContext& scene_context) {
     // Set this to true if the user has changed any of the material values, otherwise the changes won't be propagated
     bool material_changed = false;
     ImGui::Text("Material");
 
-    // Add UI controls here
+    // Add UI controls for diffuse tint
+    ImGui::Text("Diffuse:");
+    glm::vec3 diffuse_color = glm::vec3(material.diffuse_tint);
+    float diffuse_intensity = material.diffuse_tint.a;
+    
+    if (ImGui::ColorEdit3("Diffuse Color", &diffuse_color[0])) {
+        material.diffuse_tint = glm::vec4(diffuse_color, diffuse_intensity);
+        material_changed = true;
+    }
+    
+    if (ImGui::DragFloat("Diffuse Intensity", &diffuse_intensity, 0.01f, 0.0f, 10.0f)) {
+        material.diffuse_tint.a = diffuse_intensity;
+        material_changed = true;
+    }
+    ImGui::DragDisableCursor(scene_context.window);
+    
+    // Add UI controls for specular tint
+    ImGui::Text("Specular:");
+    glm::vec3 specular_color = glm::vec3(material.specular_tint);
+    float specular_intensity = material.specular_tint.a;
+    
+    if (ImGui::ColorEdit3("Specular Color", &specular_color[0])) {
+        material.specular_tint = glm::vec4(specular_color, specular_intensity);
+        material_changed = true;
+    }
+    
+    if (ImGui::DragFloat("Specular Intensity", &specular_intensity, 0.01f, 0.0f, 10.0f)) {
+        material.specular_tint.a = specular_intensity;
+        material_changed = true;
+    }
+    ImGui::DragDisableCursor(scene_context.window);
+    
+    // Add UI controls for ambient tint
+    ImGui::Text("Ambient:");
+    glm::vec3 ambient_color = glm::vec3(material.ambient_tint);
+    float ambient_intensity = material.ambient_tint.a;
+    
+    if (ImGui::ColorEdit3("Ambient Color", &ambient_color[0])) {
+        material.ambient_tint = glm::vec4(ambient_color, ambient_intensity);
+        material_changed = true;
+    }
+    
+    if (ImGui::DragFloat("Ambient Intensity", &ambient_intensity, 0.01f, 0.0f, 10.0f)) {
+        material.ambient_tint.a = ambient_intensity;
+        material_changed = true;
+    }
+    ImGui::DragDisableCursor(scene_context.window);
+    
+    // Add UI control for shininess
+    ImGui::Text("Surface Properties:");
+    if (ImGui::DragFloat("Shininess", &material.shininess, 1.0f, 1.0f, 1000.0f, "%.1f")) {
+        material_changed = true;
+    }
+    ImGui::DragDisableCursor(scene_context.window);
 
     ImGui::Spacing();
     if (material_changed) {
@@ -156,12 +209,25 @@ json EditorScene::LitMaterialComponent::material_into_json() const {
     }};
 }
 
-void EditorScene::EmissiveMaterialComponent::add_emissive_material_imgui_edit_section(MasterRenderScene& /*render_scene*/, const SceneContext& /*scene_context*/) {
+void EditorScene::EmissiveMaterialComponent::add_emissive_material_imgui_edit_section(MasterRenderScene& /*render_scene*/, const SceneContext& scene_context) {
     // Set this to true if the user has changed any of the material values, otherwise the changes won't be propagated
     bool material_changed = false;
     ImGui::Text("Emissive Material");
 
-    // Add UI controls here
+    // Add UI controls for emission tint
+    glm::vec3 emission_color = glm::vec3(material.emission_tint);
+    float emission_intensity = material.emission_tint.a;
+    
+    if (ImGui::ColorEdit3("Emission Color", &emission_color[0])) {
+        material.emission_tint = glm::vec4(emission_color, emission_intensity);
+        material_changed = true;
+    }
+    
+    if (ImGui::DragFloat("Emission Intensity", &emission_intensity, 0.01f, 0.0f, 10.0f)) {
+        material.emission_tint.a = emission_intensity;
+        material_changed = true;
+    }
+    ImGui::DragDisableCursor(scene_context.window);
 
     ImGui::Spacing();
     if (material_changed) {
