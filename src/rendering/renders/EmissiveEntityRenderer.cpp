@@ -6,8 +6,12 @@ EmissiveEntityRenderer::EmissiveEntityShader::EmissiveEntityShader() :
 }
 
 void EmissiveEntityRenderer::EmissiveEntityShader::get_uniforms_set_bindings() {
-    // Material
+    BaseEntityShader::get_uniforms_set_bindings(); // Call the base implementation
+    
+    // Material properties
     emission_tint_location = get_uniform_location("emissive_tint");
+    emission_texture_scale_location = get_uniform_location("emission_texture_scale");
+    
     // Texture sampler bindings
     set_binding("emissive_texture", 0);
 }
@@ -17,9 +21,10 @@ void EmissiveEntityRenderer::EmissiveEntityShader::set_instance_data(const Insta
 
     const auto& entity_material = instance_data.material;
 
-    glm::vec3 scaled_diffuse_tint = glm::vec3(entity_material.emission_tint) * entity_material.emission_tint.a;
+    glm::vec3 scaled_emission_tint = glm::vec3(entity_material.emission_tint) * entity_material.emission_tint.a;
 
-    glProgramUniform3fv(id(), emission_tint_location, 1, &scaled_diffuse_tint[0]);
+    glProgramUniform3fv(id(), emission_tint_location, 1, &scaled_emission_tint[0]);
+    glProgramUniform2fv(id(), emission_texture_scale_location, 1, &entity_material.emission_texture_scale[0]);
 }
 
 EmissiveEntityRenderer::EmissiveEntityRenderer::EmissiveEntityRenderer() : shader() {}

@@ -1,3 +1,5 @@
+// Modified version of src/rendering/renders/shaders/BaseLitEntityShader.h
+
 #ifndef BASE_LIT_ENTITY_SHADER_H
 #define BASE_LIT_ENTITY_SHADER_H
 
@@ -24,6 +26,10 @@ struct BaseLitEntityMaterial {
     glm::vec4 specular_tint;
     glm::vec4 ambient_tint;
     float shininess;
+    
+    // Texture scaling factors - using vec2 for per-axis scaling
+    glm::vec2 diffuse_texture_scale{1.0f, 1.0f};
+    glm::vec2 specular_texture_scale{1.0f, 1.0f};
 };
 
 struct BaseLitEntityInstanceData : public BaseEntityInstanceData {
@@ -53,6 +59,10 @@ protected:
     int specular_tint_location{};
     int ambient_tint_location{};
     int shininess_location{};
+    
+    // Add texture scale uniform locations
+    int diffuse_texture_scale_location{};
+    int specular_texture_scale_location{};
 
     static const uint POINT_LIGHT_BINDING = 0;
 
