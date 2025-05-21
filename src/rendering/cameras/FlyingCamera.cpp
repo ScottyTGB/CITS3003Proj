@@ -8,7 +8,9 @@
 #include "rendering/imgui/ImGuiManager.h"
 
 
-FlyingCamera::FlyingCamera() : pitch(init_pitch), yaw(init_yaw), near(init_near), fov(init_fov) {}
+FlyingCamera::FlyingCamera()
+    : pitch(init_pitch), yaw(init_yaw), near(init_near), fov(init_fov),
+      gamma(init_gamma), position(init_position) {}
 
 FlyingCamera::FlyingCamera(glm::vec3 position, float pitch, float yaw, float near, float fov)
     : init_position(position), init_pitch(pitch), init_yaw(yaw), init_near(near), init_fov(fov), position(position), pitch(pitch), yaw(yaw), near(near), fov(fov) {}
@@ -101,7 +103,7 @@ void FlyingCamera::update(const Window& window, float dt, bool controlsEnabled) 
         glm::translate(-position);
     inverse_view_matrix = glm::inverse(view_matrix);
 
-    projection_matrix = glm::infinitePerspective(fov, window.get_framebuffer_aspect_ratio(), 1.0f);
+    projection_matrix = glm::infinitePerspective(fov, window.get_framebuffer_aspect_ratio(), near);
     inverse_projection_matrix = glm::inverse(projection_matrix);
 }
 
@@ -152,7 +154,8 @@ CameraProperties FlyingCamera::save_properties() const {
         yaw,
         pitch,
         fov,
-        gamma
+        gamma,
+        near
     };
 }
 
@@ -162,6 +165,8 @@ void FlyingCamera::load_properties(const CameraProperties& camera_properties) {
     pitch = camera_properties.pitch;
     fov = camera_properties.fov;
     gamma = camera_properties.gamma;
+    near = camera_properties.near;
+
 }
 
 glm::mat4 FlyingCamera::get_view_matrix() const {

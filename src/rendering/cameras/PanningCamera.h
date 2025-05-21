@@ -13,12 +13,14 @@ class PanningCamera : public CameraInterface {
     float init_fov = glm::radians(90.0f);
     float init_gamma = 2.2f;
 
+
     float distance;
     glm::vec3 focus_point{};
     float pitch;
     float yaw;
     float near;
     float fov;
+    float far = 1000.0f;
 
     const glm::vec3 UP = {0.0f, 1.0f, 0.0f};
     const glm::vec3 RIGHT = {1.0f, 0.0f, 0.0f};
@@ -44,23 +46,23 @@ class PanningCamera : public CameraInterface {
 public:
     /// Construct the Camera with default initial state
     PanningCamera();
-    
+
     /// Construct the Camera with a specific initial state, which will also be the reset state.
     PanningCamera(float distance, glm::vec3 focus_point, float pitch, float yaw, float near, float fov);
-    
+
     void update(const Window& window, float dt, bool controls_enabled) override;
     void reset() override;
     void add_imgui_options_section(const SceneContext& scene_context) override;
-    
+
     [[nodiscard]] CameraProperties save_properties() const override;
     void load_properties(const CameraProperties& camera_properties) override;
-    
+
     [[nodiscard]] glm::mat4 get_view_matrix() const override;
     [[nodiscard]] glm::mat4 get_inverse_view_matrix() const override;
     [[nodiscard]] glm::mat4 get_projection_matrix() const override;
     [[nodiscard]] glm::mat4 get_inverse_projection_matrix() const override;
     [[nodiscard]] float get_gamma() const override;
-    
+
     // Added method to get camera position
     [[nodiscard]] glm::vec3 get_position() const;
 };
